@@ -1,0 +1,32 @@
+# Compiled Python files
+*.pyc
+
+# Compiled C extensions
+*.so
+
+# Distribution / packaging
+.Python
+env/
+build/
+dist/
+eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+results/
+scms/
+models/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# PyCharm files
+.idea/
+
+# macOS files
+.DS_Store
+
+# Windows files
+Thumbs.db
