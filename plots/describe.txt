@@ -1,0 +1,9 @@
+result 1:
+
+do not use normilizer in data generating.
+use margin [0.1, 0.5, 1]
+
+retult2:
+use data normalizer
+only use xior increase lambda to 10
+
