@@ -48,13 +48,13 @@ def get_scm(data_name):
     return scm
 
 
-def learning_data(data_name, data_type, num_points=1000, margin=1.0, Q_metric=l_p, sensitive=None):
+def learning_data(data_name, data_type, num_points=1000, radii=1.0, Q_metric=l_p, sensitive=None):
     """
     This function returns the learning data for the given dataset name.
     :param data_name: data name includes compas, adult, lin, nlm, imf, loan
     :param data_type: contrastive, triplet
     :param num_points: number of points to generate
-    :param margin: margin for triplet loss or diameter for distance loss
+    :param radii: margin for triplet loss or diameter for distance loss
     :param Q_metric: semi-latent metric
     :param sensitive: the list of sensitive attributes of the dataset
     :return: The learning data for the given dataset name.
@@ -62,9 +62,9 @@ def learning_data(data_name, data_type, num_points=1000, margin=1.0, Q_metric=l_
 
     scm = get_scm(data_name)
     if data_type == "contrastive":
-        data_dict = scm.generate_contrastive(num_points, margin, Q_metric)
+        data_dict = scm.generate_contrastive(num_points, radii, Q_metric)
     elif data_type == "triplet":
-        data_dict = scm.generate_triplet(num_points, margin, Q_metric)
+        data_dict = scm.generate_triplet(num_points, radii, Q_metric)
     else:
         raise AssertionError
 

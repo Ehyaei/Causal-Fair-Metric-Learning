@@ -51,7 +51,7 @@ def closest_points(center, radius, metric_func, num_points=1000):
     points = []
     distances = []
 
-    for _ in range(num_points):
+    while len(points) < num_points:
         # Generate a random point within a unit sphere in a high-dimensional space
         random_point = torch.randn_like(center)
         start_point = center + random_point
@@ -85,7 +85,7 @@ def farthest_points(center, radius, metric_func, num_points=1000):
     """
     points = []
     distances = []
-    for _ in range(num_points):
+    while len(points) < num_points:
         # Generate a random point within a unit sphere in a high-dimensional space
         random_point = torch.randn_like(center)
         scaled_point = center + random_point
@@ -93,7 +93,7 @@ def farthest_points(center, radius, metric_func, num_points=1000):
         random_point /= d
 
         # Scale the random point by the radius and add it to the center
-        random_number = 1/(0.2 + 0.8*torch.rand(1))
+        random_number = 1 + 4 * torch.rand(1)
         scaled_point = center + radius * random_number * random_point
         d = metric_func(center, scaled_point)
         # Check if the scaled point is within the unit ball
@@ -116,8 +116,7 @@ def random_sample(data, sample_num, replace=False):
     """
     num_points = data.shape[0]
     indices = np.random.choice(num_points, sample_num, replace)
-    return data[indices,:]
-
+    return data[indices, :]
 
 
 def get_metric(metric_name):
@@ -141,18 +140,18 @@ def get_model_save_dir(data_name, data_type, decorrelation_loss_fn, output_type,
 
 
 def get_metrics_save_dir(data_name, data_type, decorrelation_loss_fn, output_type, metric_name, seed, margin, lambd):
-    return metrics_save_dir+ '%s_%s_%s_%s_%s_%.0f_%.2f_%.2f' % (
+    return metrics_save_dir + '%s_%s_%s_%s_%s_%.0f_%.2f_%.2f' % (
         data_name, data_type, decorrelation_loss_fn, output_type, metric_name, seed, margin, lambd)
 
 
-def result_to_DF(path='results/', save ='plots/'):
+def result_to_DF(path='results/', save='plots/'):
     files = os.listdir(path)
-    df_cols = ["data", "type", "decorrelation", "output_type", "metric", "seed", "margin", "lambda", "indicator"]
+    df_cols = ["data", "type", "decorrelation", "output_type", "metric", "seed", "radii", "lambda", "indicator"]
     split_columns = [s.replace('.npy', '').split("_") for s in files]
     df = pd.DataFrame(split_columns, columns=df_cols)
     df['value'] = np.nan
     for i in range(len(files)):
-            df.loc[i, "value"] = float(np.load(path + files[i]))
+        df.loc[i, "value"] = float(np.load(path + files[i]))
 
     df.to_csv(save + 'results.csv', index=False)
     return "File saved to " + save + 'results.csv'
