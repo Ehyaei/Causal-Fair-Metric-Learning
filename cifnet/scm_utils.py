@@ -322,55 +322,55 @@ class SCM:
         q_2 = self.X2Q(x_2, sensitive)
         return Q_metric(q_1, q_2)
 
-    def positive_pairs(self, X, margin, Q_metric=l_p, sensitive=None):
+    def positive_pairs(self, Xn, radii, Q_metric=l_p, sensitive=None):
         sensitive = self.sensitive if sensitive is None else sensitive
-        non_sensitive = list(set(range(X.shape[1])) - set(sensitive))
+        non_sensitive = list(set(range(Xn.shape[1])) - set(sensitive))
         d = len(non_sensitive)
-        num_points = X.shape[0]
+        num_points = Xn.shape[0]
+        # TODO: add set_sensitive_levels and get_sensitive_levels for scm
         levels = self.sensitive_levels(sensitive)
         random_levels = random_sample(levels, num_points, replace=True)
         center_point = torch.zeros(d)
-        close_points, distances = closest_points(center_point, margin, Q_metric, num_points)
+        close_points, distances = closest_points(center_point, radii, Q_metric, num_points)
 
-        Q = self.X2Q(X, sensitive)
+        Q = self.Xn2Q(Xn, sensitive)
         Q[:, sensitive] = random_levels[:, sensitive]
         Q[:, non_sensitive] += close_points
 
-
         labels = torch.ones(Q.shape[0])
 
-        return self.Q2X(Q, sensitive), distances, labels
+        return self.Q2Xn(Q, sensitive), distances, labels
 
-    def negative_pairs(self, X, margin, Q_metric=l_p, sensitive=None):
+    def negative_pairs(self, Xn, radii, Q_metric=l_p, sensitive=None):
         sensitive = self.sensitive if sensitive is None else sensitive
-        non_sensitive = list(set(range(X.shape[1])) - set(sensitive))
+        non_sensitive = list(set(range(Xn.shape[1])) - set(sensitive))
         d = len(non_sensitive)
-        num_points = X.shape[0]
+        num_points = Xn.shape[0]
 
         levels = self.sensitive_levels(sensitive)
         random_levels = random_sample(levels, num_points, replace=True)
 
         center_point = torch.zeros(d)
-        close_points, distances = farthest_points(center_point, margin, Q_metric, num_points)
+        close_points, distances = farthest_points(center_point, radii, Q_metric, num_points)
 
-        Q = self.X2Q(X, sensitive)
+        Q = self.Xn2Q(Xn, sensitive)
         Q[:, sensitive] = random_levels[:, sensitive]
         Q[:, non_sensitive] += close_points
 
         labels = torch.zeros(Q.shape[0])
 
-        return self.Q2X(Q, sensitive), distances, labels
+        return self.Q2Xn(Q, sensitive), distances, labels
 
-    def generate_contrastive(self, num_points, margin=1.0, Q_metric=l_p, sensitive=None):
+    def generate_contrastive(self, num_points, radii=1.0, Q_metric=l_p, sensitive=None):
         sensitive = self.sensitive if sensitive is None else sensitive
         n = int(num_points/2)
 
         X_1, _ = self.generate(n)
-        X_1 = self.Xn2X(torch.from_numpy(X_1))
+        X_1 = torch.from_numpy(X_1)
         X_2, _ = self.generate(n)
-        X_2 = self.Xn2X(torch.from_numpy(X_2))
-        X_pos, d_pos, l_pos = self.positive_pairs(X_1, margin, Q_metric, sensitive)
-        X_neg, d_neg, l_neg = self.negative_pairs(X_2, margin, Q_metric, sensitive)
+        X_2 = torch.from_numpy(X_2)
+        X_pos, d_pos, l_pos = self.positive_pairs(X_1, radii, Q_metric, sensitive)
+        X_neg, d_neg, l_neg = self.negative_pairs(X_2, radii, Q_metric, sensitive)
 
         X1 = torch.cat((X_1, X_2), 0)
         X2 = torch.cat((X_pos, X_neg), 0)
@@ -379,15 +379,24 @@ class SCM:
 
         return {"X1": X1, "X2": X2, "labels": labels, "distances": distances}
 
-    def generate_triplet(self, num_points, margin=.1, Q_metric=l_p, sensitive=None):
+    def generate_triplet(self, num_points, radii=.1, Q_metric=l_p, sensitive=None):
         sensitive = self.sensitive if sensitive is None else sensitive
         X_a, _ = self.generate(num_points)
-        X_a = self.Xn2X(torch.from_numpy(X_a))
-        X_pos, d_pos, _ = self.positive_pairs(X_a, margin, Q_metric, sensitive)
-        X_neg, d_neg, _ = self.negative_pairs(X_a, margin, Q_metric, sensitive)
-        label = (d_pos + margin < d_neg).to(torch.int)
+        X_a = torch.from_numpy(X_a)
+        X_pos, d_pos, _ = self.positive_pairs(X_a, radii, Q_metric, sensitive)
+        X_neg, d_neg, _ = self.negative_pairs(X_a, radii, Q_metric, sensitive)
 
-        return {"X_a": X_a, "X_pos": X_pos, "X_neg": X_neg, "dis_pos": d_pos, "dis_neg": d_neg, "label": label}
+        B = torch.randint(2, size=(num_points, 1), dtype=torch.float32)
+        X1 = B * X_neg + (1 - B) * X_pos
+        X2 = (1 - B) * X_neg + B * X_pos
+
+        B = B.squeeze()
+        d1 = B * d_neg + (1 - B) * d_pos
+        d2 = (1 - B) * d_neg + B * d_pos
+
+        label = (d1 < d2).to(torch.int)
+
+        return {"X_a": X_a, "X_1": X1, "X_2": X2, "d_1": d1, "d_2": d2, "label": label}
 
     def U2Xn(self, U):
         """

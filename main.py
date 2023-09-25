@@ -32,7 +32,7 @@ def run_benchmark(seed):
         - triplet
 
     decorrelation_loss_fn includes:
-        - spearman
+        - pearson
         - xicor
         - None
 
@@ -46,23 +46,23 @@ def run_benchmark(seed):
         - l05
         - linf
 
-    margin includes:
+    radi includes:
         - 0.1
         - 0.5
         - 1.0
     """
 
-    data_names = ["compas", "adult", "lin", "nlm", "imf", "loan"]
-    data_types = ["contrastive", "triplet"]
-    decorrelation_loss_fns = ["spearman", "xicor", None]
-    output_types = ["label", "embedding"]
+    data_names = ["loan"]  # ["compas", "adult", "lin", "nlm", "imf", "loan"]
+    data_types = ["contrastive", "triplet"]  # ["contrastive", "triplet"]
+    decorrelation_loss_fns = [None]  # ["pearson", "xicor", None]
+    output_types = ["label", "embedding"]  # ["label", "embedding"]
     metric_names = ["l2"]  # ["l1", "l2", "l05", "linf"]
-
+    radiis = [0.05]  # [0.05, 0.1, 0.2]
     num_points = 10000
-    epochs = 10
+    epochs = 20
     hidden_dim = 20
-    batch_size = 100
-    lambda_reg = 10
+    batch_size = 50
+    lambda_reg = 0.01
     device = 'cpu'
     counter = 0
     verbose = True
@@ -78,8 +78,8 @@ def run_benchmark(seed):
         scm = get_scm(data_name)
         input_dim = len(scm.mean)
         embedding_dim = len(scm.mean) - len(scm.get_sensitive())
-        embedding_net = DeepEmbeddingNet(input_dim, hidden_dim, embedding_dim)
-        # embedding_net = EmbeddingNet(input_dim, hidden_dim, embedding_dim)
+        # embedding_net = DeepEmbeddingNet(input_dim, hidden_dim, embedding_dim)
+        embedding_net = EmbeddingNet(input_dim, hidden_dim, embedding_dim)
 
         for data_type in data_types:
             for metric_name in metric_names:
@@ -87,42 +87,51 @@ def run_benchmark(seed):
                 # get the metric
                 Q_metric = get_metric(metric_name)
 
-                for margin in [0.1, 0.2, 0.5]:
+                for radii in radiis:
                     # set model
-                    data_dict = learning_data(data_name, data_type, num_points, margin, Q_metric)
+                    data_dict = learning_data(data_name, data_type, num_points, radii, Q_metric)
 
                     if data_type == 'contrastive':
-                        model = SiameseNet(embedding_net, margin, Q_metric)
+                        model = SiameseNet(embedding_net, radii, Q_metric)
                     elif data_type == 'triplet':
-                        model = TripletNet(embedding_net, margin, Q_metric)
+                        output_types = ["label"]
+                        model = TripletNet(embedding_net, radii, Q_metric)
 
                     for decorrelation_loss_fn in decorrelation_loss_fns:
                         for output_type in output_types:
                             counter += 1
+
+                            if data_type == 'contrastive':
+                                margin = radii
+                            else:
+                                margin = 0.0
+
                             print("Running experiment %d with: data_name: %s, data_type: %s, decorrelation_loss_fn: "
-                                  "%s, output_type: %s, Q_metric: %s, margin: %s" % (counter, data_name, data_type,
-                                                                                     decorrelation_loss_fn,
-                                                                                     output_type, metric_name, margin))
+                                  "%s, output_type: %s, Q_metric: %s, radi: %s" % (counter, data_name, data_type,
+                                                                                   decorrelation_loss_fn,
+                                                                                   output_type, metric_name, radii))
 
                             # Train the model
                             embedding_trainer = Trainer(batch_size=batch_size, lambda_reg=lambda_reg,
                                                         device=device, verbose=verbose)
-                            acc, rmse, mpe, mcc = embedding_trainer.train(model, data_dict, data_type, output_type,
+
+                            acc, rmse, r2, mcc = embedding_trainer.train(model, data_dict, data_type, output_type,
                                                                           epochs, decorrelation_loss_fn, margin,
                                                                           Q_metric)
 
                             # Save the results
                             metrics_save_dir = utils.get_metrics_save_dir(data_name, data_type,
                                                                           decorrelation_loss_fn, output_type,
-                                                                          metric_name, seed, margin, lambda_reg)
+                                                                          metric_name, seed, radii, lambda_reg)
                             np.save(metrics_save_dir + '_acc.npy', np.array([acc]))
                             np.save(metrics_save_dir + '_rmse.npy', np.array([rmse]))
-                            np.save(metrics_save_dir + '_mpe.npy', np.array([mpe]))
+                            np.save(metrics_save_dir + '_r2.npy', np.array([r2]))
                             np.save(metrics_save_dir + '_mcc.npy', np.array([mcc]))
 
                             current_time = datetime.now()
                             formatted_time = current_time.strftime("%I:%M:%S %p")
                             print("Is done at: ", formatted_time)
+                            print(f"Acc: {acc:.4f} mcc: {mcc:.4f} rmse: {rmse:.4f} R2: {r2:.4f}")
                             print("=============================================================")
     result_to_DF()
 
@@ -134,4 +143,5 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--seed', type=int, default=0)
     args = parser.parse_args()
-    run_benchmark(args.seed)
+    run_benchmark(0)
+    # run_benchmark(args.seed)

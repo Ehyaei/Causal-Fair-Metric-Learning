@@ -29,7 +29,7 @@ class HuberLoss(nn.Module):
         self.eps = 1e-9
         self.Q_metric = Q_metric
 
-    def forward(self, output1, output2, target, size_average=True):
+    def forward(self, output1, output2, target, size_average=False):
         distances = self.Q_metric(output1, output2)
         losses = F.huber_loss(target.float(), distances)
 
@@ -51,13 +51,11 @@ class ContrastiveLoss(nn.Module):
     def __init__(self, margin, Q_metric):
         super(ContrastiveLoss, self).__init__()
         self.margin = margin
-        self.eps = 1e-9
         self.Q_metric = Q_metric
 
-    def forward(self, output1, output2, target, size_average=True):
-        distances = self.Q_metric(output1, output2)
-        losses = 0.5 * (target.float() * distances +
-                        (1 + -1 * target).float() * F.relu(self.margin - (distances + self.eps).sqrt()).pow(2))
+    def forward(self, output1, output2, target, size_average=False):
+        distance = self.Q_metric(output1, output2)
+        losses = target.float() * distance + (1 + -1 * target).float() * F.relu(self.margin - distance)
         return losses.mean() if size_average else losses.sum()
 
 
@@ -129,7 +127,7 @@ class QuadrupletLoss(nn.Module):
 #              Choose the Loss w.r.t Data                  #
 #                                                          #
 ############################################################
-def loss_fn(model, batch, data_type, output_type, margin=0.1, Q_metric=l_p):
+def loss_fn(model, batch, data_type, output_type, margin=10.0, Q_metric=l_p):
     if data_type == 'contrastive':
         X1, X2, label, distance = batch
         O1, O2 = model(X1, X2)
@@ -140,8 +138,8 @@ def loss_fn(model, batch, data_type, output_type, margin=0.1, Q_metric=l_p):
         else:
             raise AssertionError
     elif data_type == 'triplet':
-        X_a, X_pos, X_neg, _, _, _ = batch
-        O_a, O_pos, O_neg = model(X_a, X_pos, X_neg)
+        X_a, X_1, X_2, _, _, _ = batch
+        O_a, O_pos, O_neg = model(X_a, X_1, X_2)
         loss = TripletLoss(margin, Q_metric)(O_a, O_pos, O_neg)
     else:
         raise AssertionError
@@ -158,19 +156,19 @@ def loss_fn(model, batch, data_type, output_type, margin=0.1, Q_metric=l_p):
 class DecorrelationLoss(nn.Module):
     """
     This loss function is used to decorrelate the features of the embedding network based on the
-    Spearman correlation coefficient.
+    pearson correlation coefficient.
     inputs:
-        method: str, method to compute the correlation matrix, either 'spearman' or 'xicor'
+        method: str, method to compute the correlation matrix, either 'pearson' or 'xicor'
     """
 
-    def __init__(self, method='spearman'):
+    def __init__(self, method='pearson'):
         super(DecorrelationLoss, self).__init__()
         self.type = method
 
     def forward(self, x):
         # Compute the covariance matrix of the input tensor
-        if self.type == 'spearman':
-            # Compute the Spearman correlation matrix
+        if self.type == 'pearson':
+            # Compute the pearson correlation matrix
             cov = torch.corrcoef(x.T)
         else:
             # Compute the Xi correlation matrix
@@ -189,15 +187,15 @@ def dec_loss_fn(model, batch, data_type, method):
     :param model: Input model network
     :param batch: Input batch
     :param data_type: Input data type, either contrastive or triplet
-    :param method: Input method to compute the correlation matrix, either 'spearman' or 'xicor'
+    :param method: Input method to compute the correlation matrix, either 'pearson' or 'xicor'
     :return: decorrelation loss
     """
     if data_type == 'contrastive':
         X1, X2, label, distance = batch
         Output = torch.cat(model(X1, X2), dim=0)
     elif data_type == 'triplet':
-        X_a, X_pos, X_neg, _, _, _ = batch
-        Output = torch.cat(model(X_a, X_pos, X_neg), dim=0)
+        X_a, X_1, X_2, _, _, _ = batch
+        Output = torch.cat(model(X_a, X_1, X_2), dim=0)
     else:
         raise AssertionError
 

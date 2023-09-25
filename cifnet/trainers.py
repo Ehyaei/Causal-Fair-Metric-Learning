@@ -31,7 +31,7 @@ class Trainer:
         self.save_freq = save_freq
         self.save_dir = save_dir
 
-    def train(self, model, data_dict, data_type, output_type, epochs, decorrelation_loss_fn=None, margin=0.1,
+    def train(self, model, data_dict, data_type, output_type, epochs, decorrelation_loss_fn=None, margin=10.0,
               Q_metric=l_p):
         """
         This function trains the given model on the given data.
@@ -40,7 +40,7 @@ class Trainer:
         :param data_type: type of the data, either contrastive or triplet
         :param output_type: type of the output, either label or embedding
         :param epochs: number of epochs to train
-        :param decorrelation_loss_fn: type of the decorrelation loss function, either spearman or xicor of None
+        :param decorrelation_loss_fn: type of the decorrelation loss function, either pearson or xicor of None
         :param margin: margin for triplet loss or diameter for distance loss
         :param Q_metric: semi-latent metric
         :return: model metrics
@@ -61,17 +61,15 @@ class Trainer:
                 loss = loss_fn(model, batch, data_type, output_type, margin, Q_metric)
                 if decorrelation_loss_fn is not None:
                     dec_loss = dec_loss_fn(model, batch, data_type, decorrelation_loss_fn)
+                    # print("Deccoralation Loss: ", round(self.lambda_reg *dec_loss.detach().item(), 4), "    Loss", round(loss.detach().item(), 4))
                     loss += self.lambda_reg * dec_loss
 
                 loss.backward(retain_graph=True)
                 optimizer.step()
 
-            if epoch % self.print_freq == 0:
-                acc, rmse, mpe, mcc = performance_metrics(model, test_dict, data_type)
-
-                if self.verbose:
-                    print(
-                        f"Acc: {acc:.4f} mcc: {mcc:.4f} rmse: {rmse:.4f} mpe: {mpe:.4f}")
+            if epoch % self.print_freq == 0 & self.verbose:
+                acc, rmse, r2, mcc = performance_metrics(model, test_dict, data_type)
+                print(f"{epoch}    Acc: {acc:.4f} mcc: {mcc:.4f} rmse: {rmse:.4f} R2: {r2:.4f}")
 
             if self.save_model:
                 if (epoch % self.save_freq) == 0 and epoch > 0:
@@ -80,31 +78,4 @@ class Trainer:
         if self.save_model:
             torch.save(model.state_dict(), self.save_dir + '.pth')
 
-
         return performance_metrics(model, test_dict, data_type)
-
-
-# ----------------------------------------------------------------------------------------------------------------------
-#
-#                                                         NICE
-#
-# ----------------------------------------------------------------------------------------------------------------------
-
-class NICE_Trainer(Trainer):
-
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.loss_function = torch.nn.BCEWithLogitsLoss(reduction='mean', pos_weight=None)
-
-
-    def get_loss(self, optimizer, model, x, y):
-        """
-        Inputs:     optimizer: torch.optim optimizer
-                    model: type torch.nn.Module
-                    x: torch.Tensor, shape (B, D)
-                    y: torch.Tensor, shape (B, )
-
-        Returns:    loss, torch.Tensor with shape (,)
-        """
-        return self.loss_function(model(x), y)

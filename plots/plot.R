@@ -7,6 +7,10 @@ result1 = read_csv("C:\\Users\\ahmad\\OneDrive\\Desktop\\PhD\\Codes\\Fair_Metric
 result1$run = "1"
 result = rbind(result1, result2)
 
+result = read_csv("C:\\Users\\ahmad\\OneDrive\\Desktop\\PhD\\Codes\\Fair_Metric_Learning\\plots\\results.csv")
+sort(unique(result$seed))
+result$run = "1"
+result$run[which(result$seed>40)] = "2"
 ggplot(subset(result, indicator == "mpe"), aes(x = value, color = decorrelation))+
   geom_density()+
   facet_wrap(data~type+output_type, scales = "free")+
@@ -17,7 +21,7 @@ stats = result %>%
   mutate(output_type = ifelse(type == "triplet", "", output_type)) %>% 
   group_by(data, type, decorrelation, output_type, metric, margin, lambda, indicator, run) %>% 
   summarise(value = mean(value))
-View(stats)
+sort(View(stats))
 
 stats %>% 
   filter(indicator == "acc" & value > 0.85) %>%
@@ -42,3 +46,21 @@ result %>%
   filter(indicator == "rmse" & data!= "imf") %>%
   select(-indicator) %>% 
   View()
+ result %>% group_by(decorrelation,indicator, type) %>% summarise(mean(value)) %>% View
+ 
+  # n=20,000
+ result1 = read_csv("C:\\Users\\ahmad\\OneDrive\\Desktop\\PhD\\Codes\\Fair_Metric_Learning\\plots\\results.csv")
+ result1$run = "01"
+  # n = 10,000
+  result2 = read_csv("C:\\Users\\ahmad\\OneDrive\\Desktop\\PhD\\Codes\\Fair_Metric_Learning\\plots\\results.csv")
+  result2$run = "02"
+  
+  # epoch = 40
+  result3 = read_csv("C:\\Users\\ahmad\\OneDrive\\Desktop\\PhD\\Codes\\Fair_Metric_Learning\\plots\\results.csv")
+  result3$run = "03"
+  
+  result = rbind(result1, result2, result3)
+
+View(result) 
+result %>% group_by(margin, decorrelation, indicator, run) %>% summarise(value = mean(value)) %>% 
+  filter(indicator == "acc") %>% View
