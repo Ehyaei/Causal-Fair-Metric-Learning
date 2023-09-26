@@ -52,20 +52,20 @@ def run_benchmark(seed):
         - 1.0
     """
 
-    data_names = ["loan"]  # ["compas", "adult", "lin", "nlm", "imf", "loan"]
-    data_types = ["contrastive", "triplet"]  # ["contrastive", "triplet"]
-    decorrelation_loss_fns = [None]  # ["pearson", "xicor", None]
-    output_types = ["label", "embedding"]  # ["label", "embedding"]
-    metric_names = ["l2"]  # ["l1", "l2", "l05", "linf"]
-    radiis = [0.05]  # [0.05, 0.1, 0.2]
+    data_names = ["compas", "adult", "lin", "nlm", "imf", "loan"]
+    data_types = ["contrastive", "triplet"]
+    decorrelation_loss_fns = ["pearson", "xicor", None]
+    output_types = ["label", "embedding"]
+    metric_names = ["l1", "l2", "l05", "linf"]
+    radiis = [0.05, 0.1, 0.2]
     num_points = 10000
-    epochs = 20
-    hidden_dim = 20
-    batch_size = 50
-    lambda_reg = 0.01
+    epochs = 100
+    hidden_dim = 50
+    batch_size = 1000
+    lambda_reg = 0.1
     device = 'cpu'
     counter = 0
-    verbose = True
+    verbose = False
 
     dirs_2_create = [utils.model_save_dir, utils.metrics_save_dir, utils.scms_save_dir]
     for directory in dirs_2_create:
@@ -78,8 +78,8 @@ def run_benchmark(seed):
         scm = get_scm(data_name)
         input_dim = len(scm.mean)
         embedding_dim = len(scm.mean) - len(scm.get_sensitive())
-        # embedding_net = DeepEmbeddingNet(input_dim, hidden_dim, embedding_dim)
-        embedding_net = EmbeddingNet(input_dim, hidden_dim, embedding_dim)
+        embedding_net = DeepEmbeddingNet(input_dim, hidden_dim, embedding_dim)
+        # embedding_net = EmbeddingNet(input_dim, hidden_dim, embedding_dim)
 
         for data_type in data_types:
             for metric_name in metric_names:
@@ -106,7 +106,7 @@ def run_benchmark(seed):
                             else:
                                 margin = 0.0
 
-                            print("Running experiment %d with: data_name: %s, data_type: %s, decorrelation_loss_fn: "
+                            print("%d: data_name: %s, data_type: %s, decorrelation_loss_fn: "
                                   "%s, output_type: %s, Q_metric: %s, radi: %s" % (counter, data_name, data_type,
                                                                                    decorrelation_loss_fn,
                                                                                    output_type, metric_name, radii))
@@ -115,7 +115,7 @@ def run_benchmark(seed):
                             embedding_trainer = Trainer(batch_size=batch_size, lambda_reg=lambda_reg,
                                                         device=device, verbose=verbose)
 
-                            acc, rmse, r2, mcc = embedding_trainer.train(model, data_dict, data_type, output_type,
+                            acc, rmse, mae, mcc = embedding_trainer.train(model, data_dict, data_type, output_type,
                                                                           epochs, decorrelation_loss_fn, margin,
                                                                           Q_metric)
 
@@ -125,14 +125,14 @@ def run_benchmark(seed):
                                                                           metric_name, seed, radii, lambda_reg)
                             np.save(metrics_save_dir + '_acc.npy', np.array([acc]))
                             np.save(metrics_save_dir + '_rmse.npy', np.array([rmse]))
-                            np.save(metrics_save_dir + '_r2.npy', np.array([r2]))
+                            np.save(metrics_save_dir + '_mae.npy', np.array([mae]))
                             np.save(metrics_save_dir + '_mcc.npy', np.array([mcc]))
 
                             current_time = datetime.now()
                             formatted_time = current_time.strftime("%I:%M:%S %p")
-                            print("Is done at: ", formatted_time)
-                            print(f"Acc: {acc:.4f} mcc: {mcc:.4f} rmse: {rmse:.4f} R2: {r2:.4f}")
-                            print("=============================================================")
+                            # print("Is done at: ", formatted_time)
+                            print(f"Acc: {acc:.4f} mcc: {mcc:.4f} rmse: {rmse:.4f} mae: {mae:.4f}")
+                            # print("=============================================================")
     result_to_DF()
 
 
@@ -143,5 +143,4 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--seed', type=int, default=0)
     args = parser.parse_args()
-    run_benchmark(0)
-    # run_benchmark(args.seed)
+    run_benchmark(args.seed)

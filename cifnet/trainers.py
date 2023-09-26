@@ -67,7 +67,7 @@ class Trainer:
                 loss.backward(retain_graph=True)
                 optimizer.step()
 
-            if epoch % self.print_freq == 0 & self.verbose:
+            if (epoch % self.print_freq == 0) & self.verbose:
                 acc, rmse, r2, mcc = performance_metrics(model, test_dict, data_type)
                 print(f"{epoch}    Acc: {acc:.4f} mcc: {mcc:.4f} rmse: {rmse:.4f} R2: {r2:.4f}")
 

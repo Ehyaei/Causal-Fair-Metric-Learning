@@ -59,8 +59,20 @@ result %>%
   result3 = read_csv("C:\\Users\\ahmad\\OneDrive\\Desktop\\PhD\\Codes\\Fair_Metric_Learning\\plots\\results.csv")
   result3$run = "03"
   
-  result = rbind(result1, result2, result3)
+  # new design
+  result4 = read_csv("C:\\Users\\ahmad\\OneDrive\\Desktop\\PhD\\Codes\\Fair_Metric_Learning\\plots\\results.csv")
+  result4$run = "04"
+  View(result4)
+  
+  result = rbind(result1, result2, result3, result4)
 
 View(result) 
 result %>% group_by(margin, decorrelation, indicator, run) %>% summarise(value = mean(value)) %>% 
   filter(indicator == "acc") %>% View
+
+
+
+
+
+result = read_csv("C:\\Users\\ahmad\\OneDrive\\Desktop\\PhD\\Codes\\Fair_Metric_Learning\\plots\\results.csv")
+View(result)
