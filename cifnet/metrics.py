@@ -10,6 +10,13 @@ def RMSE(x, y):
 def mpe(x, y):
     return torch.mean(torch.abs((x - y) / y))
 
+# define mean absolute error
+
+
+def MAE(x, y):
+    return torch.mean(torch.abs(x - y))
+
+
 def Accuracy(x, y):
     return torch.mean((x == y).float())
 
@@ -43,6 +50,6 @@ def performance_metrics(model, test_dict, data_type):
         acc = Accuracy(label_pred, label_true)
         mcc = MCC(label_pred, label_true)
         rmse = RMSE(distance_pred, distance_true)
-        ars = mpe(distance_pred, distance_true)
+        mae = MAE(distance_pred, distance_true)
 
-    return acc, rmse, ars, mcc
+    return acc, rmse, mae, mcc
