@@ -1,5 +1,4 @@
 import os
-from datetime import datetime
 
 import numpy as np
 
@@ -31,6 +30,10 @@ def run_benchmark(seed):
         - contrastive
         - triplet
 
+    net:
+        - deep
+        - shallow
+
     decorrelation_loss_fn includes:
         - pearson
         - xicor
@@ -47,16 +50,16 @@ def run_benchmark(seed):
         - linf
 
     radi includes:
+        - 0.05
         - 0.1
-        - 0.5
-        - 1.0
+        - 0.2
     """
 
     data_names = ["compas", "adult", "lin", "nlm", "imf", "loan"]
     data_types = ["contrastive", "triplet"]
     decorrelation_loss_fns = ["pearson", "xicor", None]
-    output_types = ["label", "embedding"]
-    metric_names = ["l1", "l2", "l05", "linf"]
+    metric_names = ["l2"]  # ["l1", "l2", "l05", "linf"]
+    nets = ["deep", "shallow"]
     radiis = [0.05, 0.1, 0.2]
     num_points = 10000
     epochs = 100
@@ -78,65 +81,69 @@ def run_benchmark(seed):
         scm = get_scm(data_name)
         input_dim = len(scm.mean)
         embedding_dim = len(scm.mean) - len(scm.get_sensitive())
-        embedding_net = DeepEmbeddingNet(input_dim, hidden_dim, embedding_dim)
-        # embedding_net = EmbeddingNet(input_dim, hidden_dim, embedding_dim)
+        for net in nets:
+            if net == "deep":
+                embedding_net = DeepEmbeddingNet(input_dim, hidden_dim, embedding_dim)
+            elif net == "shallow":
+                embedding_net = EmbeddingNet(input_dim, hidden_dim, embedding_dim)
+            else:
+                raise ValueError("Unknown net name: %s" % net)
+            for data_type in data_types:
+                for metric_name in metric_names:
+                    # get the metric
+                    Q_metric = get_metric(metric_name)
 
-        for data_type in data_types:
-            for metric_name in metric_names:
+                    for radii in radiis:
+                        # set model
+                        data_dict = learning_data(data_name, data_type, num_points, radii, Q_metric)
 
-                # get the metric
-                Q_metric = get_metric(metric_name)
+                        if data_type == 'contrastive':
+                            model = SiameseNet(embedding_net, radii, Q_metric)
+                            output_types = ["label", "embedding"]
+                        elif data_type == 'triplet':
+                            output_types = ["label"]
+                            model = TripletNet(embedding_net, radii, Q_metric)
 
-                for radii in radiis:
-                    # set model
-                    data_dict = learning_data(data_name, data_type, num_points, radii, Q_metric)
+                        for decorrelation_loss_fn in decorrelation_loss_fns:
+                            for output_type in output_types:
+                                counter += 1
 
-                    if data_type == 'contrastive':
-                        model = SiameseNet(embedding_net, radii, Q_metric)
-                    elif data_type == 'triplet':
-                        output_types = ["label"]
-                        model = TripletNet(embedding_net, radii, Q_metric)
+                                if data_type == 'contrastive':
+                                    margin = radii
+                                else:
+                                    margin = 0.0
 
-                    for decorrelation_loss_fn in decorrelation_loss_fns:
-                        for output_type in output_types:
-                            counter += 1
+                                print("%d: data_name: %s, data_type: %s, net: %s, decorrelation_loss_fn: "
+                                      "%s, output_type: %s, Q_metric: %s, radi: %s" % (counter, data_name, data_type,
+                                                                                       net, decorrelation_loss_fn,
+                                                                                       output_type, metric_name, radii))
 
-                            if data_type == 'contrastive':
-                                margin = radii
-                            else:
-                                margin = 0.0
+                                # Train the model
+                                embedding_trainer = Trainer(batch_size=batch_size, lambda_reg=lambda_reg,
+                                                            device=device, verbose=verbose)
 
-                            print("%d: data_name: %s, data_type: %s, decorrelation_loss_fn: "
-                                  "%s, output_type: %s, Q_metric: %s, radi: %s" % (counter, data_name, data_type,
-                                                                                   decorrelation_loss_fn,
-                                                                                   output_type, metric_name, radii))
+                                acc, rmse, mae, mcc, fp, fn = embedding_trainer.train(model, data_dict, data_type,
+                                                                                      output_type,
+                                                                                      epochs, decorrelation_loss_fn,
+                                                                                      margin,
+                                                                                      Q_metric)
 
-                            # Train the model
-                            embedding_trainer = Trainer(batch_size=batch_size, lambda_reg=lambda_reg,
-                                                        device=device, verbose=verbose)
+                                # Save the results
+                                metrics_save_dir = utils.get_metrics_save_dir(data_name, data_type, net,
+                                                                              decorrelation_loss_fn, output_type,
+                                                                              metric_name, seed, radii, lambda_reg)
+                                np.save(metrics_save_dir + '_acc.npy', np.array([acc]))
+                                np.save(metrics_save_dir + '_rmse.npy', np.array([rmse]))
+                                np.save(metrics_save_dir + '_mae.npy', np.array([mae]))
+                                np.save(metrics_save_dir + '_mcc.npy', np.array([mcc]))
+                                np.save(metrics_save_dir + '_fp.npy', np.array([fp]))
+                                np.save(metrics_save_dir + '_fn.npy', np.array([fn]))
 
-                            acc, rmse, mae, mcc = embedding_trainer.train(model, data_dict, data_type, output_type,
-                                                                          epochs, decorrelation_loss_fn, margin,
-                                                                          Q_metric)
+                                print(f"Acc: {acc:.4f} mcc: {mcc:.4f} rmse: {rmse:.4f} mae: {mae:.4f} fp: {fp:.4f} fn: {fn:.4f}")
 
-                            # Save the results
-                            metrics_save_dir = utils.get_metrics_save_dir(data_name, data_type,
-                                                                          decorrelation_loss_fn, output_type,
-                                                                          metric_name, seed, radii, lambda_reg)
-                            np.save(metrics_save_dir + '_acc.npy', np.array([acc]))
-                            np.save(metrics_save_dir + '_rmse.npy', np.array([rmse]))
-                            np.save(metrics_save_dir + '_mae.npy', np.array([mae]))
-                            np.save(metrics_save_dir + '_mcc.npy', np.array([mcc]))
-
-                            current_time = datetime.now()
-                            formatted_time = current_time.strftime("%I:%M:%S %p")
-                            # print("Is done at: ", formatted_time)
-                            print(f"Acc: {acc:.4f} mcc: {mcc:.4f} rmse: {rmse:.4f} mae: {mae:.4f}")
-                            # print("=============================================================")
     result_to_DF()
 
 
-# Press the green button in the gutter to run the script.
 if __name__ == "__main__":
     import argparse
 
@@ -144,3 +151,4 @@ if __name__ == "__main__":
     parser.add_argument('--seed', type=int, default=0)
     args = parser.parse_args()
     run_benchmark(args.seed)
+

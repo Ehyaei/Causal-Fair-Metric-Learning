@@ -68,8 +68,8 @@ class Trainer:
                 optimizer.step()
 
             if (epoch % self.print_freq == 0) & self.verbose:
-                acc, rmse, r2, mcc = performance_metrics(model, test_dict, data_type)
-                print(f"{epoch}    Acc: {acc:.4f} mcc: {mcc:.4f} rmse: {rmse:.4f} R2: {r2:.4f}")
+                acc, rmse, mae, mcc, fp, fn = performance_metrics(model, test_dict, data_type)
+                print(f"{epoch}    Acc: {acc:.4f} mcc: {mcc:.4f} rmse: {rmse:.4f} mae: {mae:.4f}  fp: {fp:.4f} fn: {fn:.4f}")
 
             if self.save_model:
                 if (epoch % self.save_freq) == 0 and epoch > 0:

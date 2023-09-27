@@ -36,9 +36,4 @@ l1 = lambda x1, x2: l_p(x1, x2, p=1)
 l2 = lambda x1, x2: l_p(x1, x2, p=2)
 linf = lambda x1, x2: l_p(x1, x2, p=float('inf'))
 l05 = lambda x1, x2: l_p(x1, x2, p=0.5)
-
-
-def discrete_metric(x, y):
-    is_equal = torch.equal(x, y)
-
-    return 1 if not is_equal else 0
+discrete = lambda x1, x2: torch.where(l_p(x1, x2, p=2) < 0.05, torch.tensor(0.0), torch.tensor(1.0))

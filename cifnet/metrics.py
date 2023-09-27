@@ -21,6 +21,14 @@ def Accuracy(x, y):
     return torch.mean((x == y).float())
 
 
+def FalsePositiveRate(label_pred, label_true):
+    return torch.mean(((label_pred == 1) & (label_true == 0)).float())
+
+
+def FalseNegativeRate(label_pred, label_true):
+    return torch.mean(((label_pred == 0) & (label_true == 1)).float())
+
+
 def MCC(x, y):
     return matthews_corrcoef(x, y)
 
@@ -51,5 +59,7 @@ def performance_metrics(model, test_dict, data_type):
         mcc = MCC(label_pred, label_true)
         rmse = RMSE(distance_pred, distance_true)
         mae = MAE(distance_pred, distance_true)
+        fp = FalsePositiveRate(label_pred, label_true)
+        fn = FalseNegativeRate(label_pred, label_true)
 
-    return acc, rmse, mae, mcc
+    return acc, rmse, mae, mcc, fp, fn
