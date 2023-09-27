@@ -75,4 +75,11 @@ result %>% group_by(margin, decorrelation, indicator, run) %>% summarise(value =
 
 
 result = read_csv("C:\\Users\\ahmad\\OneDrive\\Desktop\\PhD\\Codes\\Fair_Metric_Learning\\plots\\results.csv")
+result = read_csv("C:\\Users\\ahmad\\Downloads/results.csv")
+
+stats = result %>% 
+  group_by(data, type, decorrelation, output_type, metric, radii, lambda, indicator) %>% 
+  summarise(value = mean(value))
+sort(View(stats))
+
 View(result)

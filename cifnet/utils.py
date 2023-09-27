@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 import torch
 
-from cifnet.dissimilarities import l1, l2, l05, linf
+from cifnet.dissimilarities import l1, l2, l05, linf, discrete
 
 model_save_dir = 'models/'
 metrics_save_dir = 'results/'
@@ -128,25 +128,27 @@ def get_metric(metric_name):
         return l05
     elif metric_name == "linf":
         return linf
+    elif metric_name == "discrete":
+        return discrete
     else:
         raise ValueError("Unknown metric name: %s" % metric_name)
 
 
-def get_model_save_dir(data_name, data_type, decorrelation_loss_fn, output_type, metric_name, seed, margin, lambd):
-    model_dir = model_save_dir + '%s_%s_%s_%s_%s_%.0f_%.2f_%.2f' % (
-        data_name, data_type, decorrelation_loss_fn, output_type, metric_name, seed, margin, lambd)
+def get_model_save_dir(data_name, data_type, net, decorrelation_loss_fn, output_type, metric_name, seed, margin, lambd):
+    model_dir = model_save_dir + '%s_%s_%s_%s_%s_%s_%.0f_%.2f_%.2f' % (
+        data_name, data_type, net, decorrelation_loss_fn, output_type, metric_name, seed, margin, lambd)
 
     return model_dir
 
 
-def get_metrics_save_dir(data_name, data_type, decorrelation_loss_fn, output_type, metric_name, seed, margin, lambd):
-    return metrics_save_dir + '%s_%s_%s_%s_%s_%.0f_%.2f_%.2f' % (
-        data_name, data_type, decorrelation_loss_fn, output_type, metric_name, seed, margin, lambd)
+def get_metrics_save_dir(data_name, data_type, net, decorrelation_loss_fn, output_type, metric_name, seed, margin, lambd):
+    return metrics_save_dir + '%s_%s_%s_%s_%s_%s_%.0f_%.2f_%.2f' % (
+        data_name, data_type, net, decorrelation_loss_fn, output_type, metric_name, seed, margin, lambd)
 
 
 def result_to_DF(path='results/', save='plots/'):
     files = os.listdir(path)
-    df_cols = ["data", "type", "decorrelation", "output_type", "metric", "seed", "radii", "lambda", "indicator"]
+    df_cols = ["data", "type", "net", "decorrelation", "output_type", "metric", "seed", "radii", "lambda", "indicator"]
     split_columns = [s.replace('.npy', '').split("_") for s in files]
     df = pd.DataFrame(split_columns, columns=df_cols)
     df['value'] = np.nan
