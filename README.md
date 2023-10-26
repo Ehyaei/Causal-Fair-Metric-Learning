@@ -46,4 +46,4 @@ This figure illustrates the impact of the causal metric assumption on the accura
 (c) The stability of our methods is evident as the radius size increases, with notable improvements in accuracy for larger radii in distance-based and label-based scenarios.
 
 <img src="images/performance_2.svg" width="100%" align="center"/>
-Performance Comparison. This figures illustrate the outcomes of the experiment with different radius size. Error bars are included to represent the variability. Two performance metrics, Matthews correlation coefficient (**MCC** - higher values indicate superior performance) and false-positive rate (**FP** - lower values indicate better performance), are considered for the analysis.
+Performance Comparison. This figures illustrate the outcomes of the experiment with different radius size. Error bars are included to represent the variability. Two performance metrics, Matthews correlation coefficient (MCC - higher values indicate superior performance) and false-positive rate (FP - lower values indicate better performance), are considered for the analysis.
