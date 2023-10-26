@@ -58,8 +58,9 @@ def run_benchmark(seed):
     data_names = ["compas", "adult", "lin", "nlm", "imf", "loan"]
     data_types = ["contrastive", "triplet"]
     decorrelation_loss_fns = ["pearson", "xicor", None]
-    metric_names = ["l2"]  # ["l1", "l2", "l05", "linf"]
-    nets = ["deep", "shallow"]
+    data_metrics = ["l1", "l2", "l05", "linf"]
+    learn_metric = ["linf"]
+    nets = ["unknown", "cifnet", "unknown"]
     radiis = [0.05, 0.1, 0.2]
     num_points = 10000
     epochs = 100
@@ -82,20 +83,23 @@ def run_benchmark(seed):
         input_dim = len(scm.mean)
         embedding_dim = len(scm.mean) - len(scm.get_sensitive())
         for net in nets:
-            if net == "deep":
-                embedding_net = DeepEmbeddingNet(input_dim, hidden_dim, embedding_dim)
-            elif net == "shallow":
+            if net == "cifnet":
                 embedding_net = EmbeddingNet(input_dim, hidden_dim, embedding_dim)
+            elif net == "unknown":
+                embedding_net = EmbeddingNet(input_dim, hidden_dim, input_dim)
             else:
                 raise ValueError("Unknown net name: %s" % net)
             for data_type in data_types:
-                for metric_name in metric_names:
+                for metric_name in data_metrics:
                     # get the metric
                     Q_metric = get_metric(metric_name)
+                    L_metric = get_metric(learn_metric)
 
                     for radii in radiis:
                         # set model
                         data_dict = learning_data(data_name, data_type, num_points, radii, Q_metric)
+                        if net == "unknown":
+                            Q_metric = L_metric
 
                         if data_type == 'contrastive':
                             model = SiameseNet(embedding_net, radii, Q_metric)
@@ -151,4 +155,3 @@ if __name__ == "__main__":
     parser.add_argument('--seed', type=int, default=0)
     args = parser.parse_args()
     run_benchmark(args.seed)
-
