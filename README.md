@@ -34,20 +34,9 @@ against other prevailing methods.
 To this end, we employ deep learning for the estimation of the embedding function and adopt the Siamese metric learning as the baseline. 
 This can be stratified into three distinct scenarios relevant to the acquisition of a causal fair metric:
 
-\begin{itemize}
-    \item \textbf{Distance-based}: Utilizing distance-tagged triplets $(v_i, v'_i, d_i)$, where $d_i$ indicates the non-negative real number representing $d(v_i, v'_i)$, we apply the Huber loss function $\ell(v_i, v_i',d_i)$ for model learning.:
-    \begin{equation*}
-        \begin{cases}
-             \frac{1}{2}(d_i - d(\varphi(v_i),\varphi(v_i')))^2 & |d_i - d(\varphi(v_i),\varphi(v_i'))| \leq \delta \\
-             \delta(|d_i - d(\varphi(v_i),\varphi(v_i'))| - \frac{1}{2} \delta)&  \mathrm{otherwise}
-        \end{cases}
-    \end{equation*}
-    \item \textbf{Label-based}: Utilizing a Siamese network~\cite{chicco2021siamese} with a contrastive loss for triplets $(v_i, v'_i, y_i)$, where $y_i \in \{0,1\}$ signifies proximity between points, the loss function $\ell(v_i, v'_i, y_i)$ is:
-    $(1-y_i)d(\varphi(v_i),\varphi(v_i')) + y_i[-d(\varphi(v_i),\varphi(v_i'))+m]_{_+}$.
-    where $m>0$ is the marginal and $[.]_{_+}:= \mathrm{max}(.,0)$ is standard Hinge loss.
-    \item \textbf{Triplet-based}: In this approach, tuples $(v^1_i, v^2_i, v^3_i, y_i)$ are considered, where $y_i$ denotes the closeness of $v^1_i$ to $v^2_i$ compared to $v^1_i$ and $v^3_i$. Embedding is trained using a Siamese network with the triplet loss function 
-    $\ell(v^1_i, v^2_i, v^3_i, y_i) =  [d(\varphi(v^1_i),\varphi(v^2_i)) - d(\varphi(v^1_i),\varphi(v^3_i))+m]_{_+}$.
-\end{itemize}
+- Distance-based
+- Label-based
+- Triplet-based
 
 # Results
 <img src="images/performance.svg" width="100%" align="center"/>
