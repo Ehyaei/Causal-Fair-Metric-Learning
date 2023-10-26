@@ -18,6 +18,7 @@ var/
 results/
 scms/
 models/
+plots/
 clone/
 *.egg-info/
 .installed.cfg
